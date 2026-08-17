@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
@@ -13,15 +14,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # 1. Checkout source code
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      # 2. Verify website files
       - name: Verify website files
         run: |
           echo "Checking website files..."
           ls -la
           test -f index.html
+          echo "Website files verified successfully."
 
+      # 3. Build website
       - name: Build website
         run: |
           echo "Building static website..."
@@ -29,6 +35,7 @@ jobs:
           cp index.html build/
           echo "Build completed successfully."
 
+      # 4. Verify build
       - name: Verify build
         run: |
           echo "Checking build directory..."
@@ -36,31 +43,8 @@ jobs:
           test -f build/index.html
           echo "CI pipeline completed successfully."
 
-      - name: Deploy website to EC2
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-        run: |
-          echo "Deploying website to EC2..."
-
-          mkdir -p ~/.ssh
-          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2_key
-          chmod 600 ~/.ssh/ec2_key
-
-          scp -o StrictHostKeyChecking=no \
-            -i ~/.ssh/ec2_key \
-            build/index.html \
-            "$EC2_USER@$EC2_HOST:/home/ec2-user/index.html"
-
-          ssh -o StrictHostKeyChecking=no \
-            -i ~/.ssh/ec2_key \
-            "$EC2_USER@$EC2_HOST" \
-            "sudo cp /home/ec2-user/index.html /var/www/html/index.html && sudo systemctl restart httpd"
-
-          echo "Website deployed successfully to EC2."
-
-      - name: Send Slack notification
+      # 5. Send Slack success notification
+      - name: Send Slack success notification
         if: success()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -68,4 +52,15 @@ jobs:
           curl -X POST \
             -H "Content-Type: application/json" \
             --data '{"text":"✅ DevOps CI Pipeline completed successfully for devops-webapp."}' \
+            "$SLACK_WEBHOOK_URL"
+
+      # 6. Send Slack failure notification
+      - name: Send Slack failure notification
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            --data '{"text":"❌ DevOps CI Pipeline failed for devops-webapp. Please check GitHub Actions logs."}' \
             "$SLACK_WEBHOOK_URL"
