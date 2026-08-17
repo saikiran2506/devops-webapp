@@ -35,3 +35,13 @@ jobs:
           ls -la build
           test -f build/index.html
           echo "CI pipeline completed successfully."
+
+      - name: Send Slack notification
+        if: success()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            --data '{"text":"✅ DevOps CI Pipeline completed successfully for devops-webapp."}' \
+            "$SLACK_WEBHOOK_URL"
