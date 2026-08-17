@@ -42,10 +42,7 @@ jobs:
           ls -la build
           test -f build/index.html
           echo "CI pipeline completed successfully."
-      - name: Temporary failure test
-        run: |
-          echo "Testing failure notification..."
-          exit 1
+
       # 5. Send Slack success notification
       - name: Send Slack success notification
         if: success()
